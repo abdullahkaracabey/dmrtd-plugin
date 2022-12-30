@@ -1,0 +1,44 @@
+group 'tr.karacabey.dmrtd'
+version '1.0'
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:7.1.2'
+    }
+}
+
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion 31
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    defaultConfig {
+        minSdkVersion 19
+        multiDexEnabled true
+    }
+    dependencies{
+        implementation 'org.jmrtd:jmrtd:0.7.18'
+        implementation 'net.sf.scuba:scuba-sc-android:0.0.20'
+        implementation 'com.madgag.spongycastle:prov:1.58.0.0'
+        implementation 'edu.ucar:jj2000:5.2'
+        implementation 'com.github.mhshams:jnbis:1.1.0'
+        implementation 'com.android.support:multidex:1.0.3'
+    }
+}

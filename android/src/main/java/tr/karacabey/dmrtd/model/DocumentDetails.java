@@ -5,19 +5,20 @@ import java.util.Map;
 
 public class DocumentDetails {
 
-    String name;
-    String surname;
-    String personalNumber;
-    String gender;
-    String birthDate;
-    String issueDate;
-    String expiryDate;
-    String serialNumber;
-    String nationality;
-    String issuerAuthority;
-    String faceImageBase64;
-    String portraitImageBase64;
-    String signatureBase64;
+    private String name;
+    private String surname;
+    private String personalNumber;
+    private String gender;
+    private String birthDate;
+    private String issueDate;
+    private String expiryDate;
+    private String serialNumber;
+    private String nationality;
+    private String issuerAuthority;
+    private String faceImageBase64;
+    private String portraitImageBase64;
+    private String signatureBase64;
+    private String mrzContent;
 
     public String getName() {
         return name;
@@ -123,6 +124,14 @@ public class DocumentDetails {
         this.signatureBase64 = signatureBase64;
     }
 
+    public String getMrzContent() {
+        return mrzContent;
+    }
+
+    public void setMrzContent(String mrzContent) {
+        this.mrzContent = mrzContent;
+    }
+
     public Map<String,String> toMap(){
 
         Map<String,String> result = new HashMap<String,String>();
@@ -139,6 +148,7 @@ public class DocumentDetails {
         result.put("faceImageBase64",faceImageBase64);
         result.put("portraitImageBase64",portraitImageBase64);
         result.put("signatureBase64",signatureBase64);
+        result.put("mrzContent",mrzContent);
 
         return result;
     }

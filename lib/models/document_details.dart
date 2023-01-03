@@ -12,8 +12,10 @@ class DocumentDetails {
   final String? faceImageBase64;
   final String? portraitImageBase64;
   final String? signatureBase64;
+  final String mrzContent;
 
   DocumentDetails(
+      this.mrzContent,
       this.name,
       this.surname,
       this.personalNumber,
@@ -31,6 +33,7 @@ class DocumentDetails {
   DocumentDetails.fromJson(Map<String, dynamic> data)
       : name = data["name"],
         surname = data["surname"],
+        mrzContent = data["mrzContent"],
         personalNumber = data["personalNumber"],
         gender = data["gender"],
         birthDate = data["birthDate"],

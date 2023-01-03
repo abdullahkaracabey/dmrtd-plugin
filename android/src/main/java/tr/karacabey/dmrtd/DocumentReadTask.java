@@ -34,6 +34,7 @@ import org.jmrtd.lds.iso19794.FaceInfo;
 import org.jmrtd.lds.iso19794.FingerImageInfo;
 import org.jmrtd.lds.iso19794.FingerInfo;
 
+import java.io.UnsupportedEncodingException;
 import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -127,6 +128,21 @@ class DocumentReadTask implements Callable<ReadResult> {
             DG1File dg1File = new DG1File(dg1In);
 
             MRZInfo mrzInfo = dg1File.getMRZInfo();
+            try {
+                String str = new String(mrzInfo.getEncoded(), "UTF-8");
+                switch(str.length()) {
+                    case 90: /* ID1 */
+                        documentDetails.setMrzContent( str.substring(0, 30) + "\n"
+                                + str.substring(30, 60) + "\n"
+                                + str.substring(60, 90));
+                    case 88: /* ID3 */
+                        documentDetails.setMrzContent(str.substring(0, 44) + "\n"
+                                + str.substring(44, 88));
+                }
+            } catch (UnsupportedEncodingException uee) {
+                throw new IllegalStateException(uee);
+            }
+            
             documentDetails.setName(mrzInfo.getSecondaryIdentifier().replace("<", " ").trim());
             documentDetails.setSurname(mrzInfo.getPrimaryIdentifier().replace("<", " ").trim());
             documentDetails.setPersonalNumber(mrzInfo.getPersonalNumber());
@@ -135,7 +151,7 @@ class DocumentReadTask implements Callable<ReadResult> {
             documentDetails.setExpiryDate(DateUtil.convertFromMrzDate(dg1File.getMRZInfo().getDateOfExpiry()));
             documentDetails.setSerialNumber(mrzInfo.getDocumentNumber());
             documentDetails.setNationality(mrzInfo.getNationality());
-            documentDetails.setIssuerAuthority(mrzInfo.getIssuingState());
+
 
             if("I".equals(mrzInfo.getDocumentCode())) {
                 docType = DocType.idCard;
@@ -253,6 +269,7 @@ class DocumentReadTask implements Callable<ReadResult> {
 
                 if (dg12File.getLength() > 0) {
                    documentDetails.setIssueDate(dg12File.getDateOfIssue());
+                    documentDetails.setIssuerAuthority(dg12File.getIssuingAuthority());
                 }
             } catch (Exception e) {
                 Log.w(TAG, e);

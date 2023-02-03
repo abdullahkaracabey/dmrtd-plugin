@@ -10,7 +10,7 @@ import 'dmrtd_platform_interface.dart';
 class MethodChannelDmrtd extends DmrtdPlatform {
   /// The method channel used to interact with the native platform.
   @visibleForTesting
-  final methodChannel = const MethodChannel('dmrtd');
+  final methodChannel = const MethodChannel('dmrtd_plugin');
 
   bool isOnWork = false;
 
@@ -39,6 +39,11 @@ class MethodChannelDmrtd extends DmrtdPlatform {
       final result = await methodChannel.invokeMethod<dynamic>('read', mrzData);
 
       if (result != null) {
+        final error = result["error"];
+
+        if (error != null) {
+          throw DocumentReadException(code: "unknown-error", message: "");
+        }
         return Document.fromJson(Map<String, dynamic>.from(result));
       } else {
         throw DocumentReadException(

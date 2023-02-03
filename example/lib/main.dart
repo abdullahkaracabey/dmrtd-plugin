@@ -30,7 +30,8 @@ class _MyAppState extends State<MyApp> {
     // Platform messages may fail, so we use a try/catch PlatformException.
     // We also handle the message potentially returning null.
     try {
-      String mrzData = "";
+      String mrzData =
+          "P<TURKARACABEY<<ABDULLAH<<<<<<<<<<<<<<<<<<<<U209530982TUR8406055M281030868347165134<<<02";
       result = await _dmrtdPlugin.read(mrzData, _onStatusChange);
       debugPrint("result $result");
     } catch (e) {

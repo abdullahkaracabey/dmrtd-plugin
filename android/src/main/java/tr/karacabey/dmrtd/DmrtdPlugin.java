@@ -47,7 +47,7 @@ public class DmrtdPlugin implements FlutterPlugin, MethodCallHandler, ActivityAw
     public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
         BinaryMessenger messenger = flutterPluginBinding.getBinaryMessenger();
         BinaryMessenger.TaskQueue taskQueue = messenger.makeBackgroundTaskQueue();
-        channel = new MethodChannel(messenger, "dmrtd", StandardMethodCodec.INSTANCE,
+        channel = new MethodChannel(messenger, "dmrtd_plugin", StandardMethodCodec.INSTANCE,
                 taskQueue);
         channel.setMethodCallHandler(this);
 

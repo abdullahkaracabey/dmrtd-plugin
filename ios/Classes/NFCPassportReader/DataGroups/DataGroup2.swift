@@ -42,7 +42,7 @@ func getImage() -> UIImage? {
             return nil
         }
         
-        let image = UIImage(data:Data(imageData) )
+    let image = UIImage(data:Data(imageData) )
         return image
     }
 #endif

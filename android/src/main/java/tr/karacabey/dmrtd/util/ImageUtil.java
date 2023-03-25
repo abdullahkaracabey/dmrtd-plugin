@@ -1,18 +1,3 @@
-/*
- * Copyright 2016 Anton Tananaev (anton.tananaev@gmail.com)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package tr.karacabey.dmrtd.util;
 
 import android.content.Context;
@@ -26,6 +11,7 @@ import org.jnbis.WsqDecoder;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -40,6 +26,7 @@ import jj2000.j2k.util.ParameterList;
 public class ImageUtil {
 
     public static Image getImage(Context context, AbstractImageInfo imageInfo) {
+        String photoMimeType = imageInfo.getMimeType();
         Image image = new Image();
         int imageLength = imageInfo.getImageLength();
         DataInputStream dataInputStream = new DataInputStream(imageInfo.getImageInputStream());
@@ -48,9 +35,22 @@ public class ImageUtil {
             dataInputStream.readFully(buffer, 0, imageLength);
             InputStream inputStream = new ByteArrayInputStream(buffer, 0, imageLength);
             Bitmap bitmapImage = ImageUtil.decodeImage(context, imageInfo.getMimeType(), inputStream);
+            bitmapImage = ImageUtil.scaleImage(bitmapImage);
             image.setBitmapImage(bitmapImage);
-            String base64Image = Base64.encodeToString(buffer, Base64.DEFAULT);
-            image.setBase64Image(base64Image);
+
+            if (photoMimeType.equalsIgnoreCase("image/jp2") || photoMimeType.equalsIgnoreCase("image/jpeg2000") || photoMimeType.equalsIgnoreCase("image/x-wsq")) {
+                ByteArrayOutputStream byteArrayOutputStream1 = new ByteArrayOutputStream();
+                bitmapImage.compress(Bitmap.CompressFormat.JPEG, 85, byteArrayOutputStream1);
+                byte[] byteArray1 = byteArrayOutputStream1.toByteArray();
+
+                String base64Image = Base64.encodeToString(byteArray1, Base64.DEFAULT);
+                image.setBase64Image(base64Image);
+            } else
+            {
+                String base64Image = Base64.encodeToString(buffer, Base64.DEFAULT);
+                image.setBase64Image(base64Image);
+            }
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -61,10 +61,11 @@ public class ImageUtil {
     public static Bitmap scaleImage(Bitmap bitmap) {
         Bitmap bitmapImage = null;
         if (bitmap != null) {
-            double ratio = 400.0 / bitmap.getHeight();
-            int targetHeight = (int) (bitmap.getHeight() * ratio);
-            int targetWidth = (int) (bitmap.getWidth() * ratio);
-            bitmapImage = Bitmap.createScaledBitmap(bitmap, targetWidth, targetHeight, false);
+//            double ratio = 400.0 / bitmap.getHeight();
+//            int targetHeight = (int) (bitmap.getHeight() * ratio);
+//            int targetWidth = (int) (bitmap.getWidth() * ratio);
+//            bitmapImage = Bitmap.createScaledBitmap(bitmap, targetWidth, targetHeight, false);
+            bitmapImage = Bitmap.createScaledBitmap(bitmap, 240, 320, false);
         }
 
         return bitmapImage;
@@ -91,7 +92,7 @@ public class ImageUtil {
 
             defaults = new ParameterList();
             for (int i = pinfo.length - 1; i >= 0; i--) {
-                if(pinfo[i][3] != null) {
+                if (pinfo[i][3] != null) {
                     defaults.put(pinfo[i][0], pinfo[i][3]);
                 }
             }
@@ -114,7 +115,7 @@ public class ImageUtil {
             if (reader.read() != 'P' || reader.read() != '6') return null;
 
             reader.read();
-            String widths = "" , heights = "";
+            String widths = "", heights = "";
             char temp;
             while ((temp = (char) reader.read()) != ' ') widths += temp;
             while ((temp = (char) reader.read()) >= '0' && temp <= '9') heights += temp;
@@ -125,12 +126,12 @@ public class ImageUtil {
             int height = Integer.valueOf(heights);
             int[] colors = new int[width * height];
 
-            byte [] pixel = new byte[3];
+            byte[] pixel = new byte[3];
             int len, cnt = 0, total = 0;
             int[] rgb = new int[3];
             while ((len = reader.read(pixel)) > 0) {
-                for (int i = 0; i < len; i ++) {
-                    rgb[cnt] = pixel[i]>=0?pixel[i]:(pixel[i] + 255);
+                for (int i = 0; i < len; i++) {
+                    rgb[cnt] = pixel[i] >= 0 ? pixel[i] : (pixel[i] + 255);
                     if ((++cnt) == 3) {
                         cnt = 0;
                         colors[total++] = Color.rgb(rgb[0], rgb[1], rgb[2]);

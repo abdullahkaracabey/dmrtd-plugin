@@ -147,7 +147,7 @@ class DocumentReadTask implements Callable<ReadResult> {
             documentDetails.setSurname(mrzInfo.getPrimaryIdentifier().replace("<", " ").trim());
             documentDetails.setPersonalNumber(mrzInfo.getPersonalNumber());
             documentDetails.setGender(mrzInfo.getGender().toString());
-            documentDetails.setBirthDate(DateUtil.convertFromMrzDate(dg1File.getMRZInfo().getDateOfBirth()));
+            // documentDetails.setBirthDate(DateUtil.convertFromMrzDate(dg1File.getMRZInfo().getDateOfBirth()));
             documentDetails.setExpiryDate(DateUtil.convertFromMrzDate(dg1File.getMRZInfo().getDateOfExpiry()));
             documentDetails.setSerialNumber(mrzInfo.getDocumentNumber());
             documentDetails.setNationality(mrzInfo.getNationality());
@@ -172,7 +172,6 @@ class DocumentReadTask implements Callable<ReadResult> {
             if (!allFaceImageInfos.isEmpty()) {
                 FaceImageInfo faceImageInfo = allFaceImageInfos.iterator().next();
                 Image image = ImageUtil.getImage(context, faceImageInfo);
-                //documentDetails.setFaceImage(image.getBitmapImage());
                 documentDetails.setFaceImageBase64(image.getBase64Image());
             }
 
@@ -243,6 +242,7 @@ class DocumentReadTask implements Callable<ReadResult> {
                 DG11File dg11File = new DG11File(dg11In);
 
                 if(dg11File.getLength() > 0) {
+                    documentDetails.setBirthDate(dg11File.getFullDateOfBirth());
                     personDetails.setCustodyInformation(dg11File.getCustodyInformation());
                     personDetails.setNameOfHolder(dg11File.getNameOfHolder());
                     personDetails.setFullDateOfBirth(dg11File.getFullDateOfBirth());

@@ -40,6 +40,17 @@ public class SwiftDmrtdPlugin: NSObject, FlutterPlugin {
     }
     
     
+    private func parseMrz(mrzContent: String)->String{
+        if(mrzContent.count == 88){
+            let firstLine = mrzContent.prefix(44)
+            let secondLine = mrzContent.suffix(44)
+            
+            return "\(firstLine)\n\(secondLine)"
+        }
+        
+        return mrzContent
+    }
+    
     private func readPassPort(mrzData : String, result: @escaping FlutterResult) async{
         
         do{
@@ -68,7 +79,7 @@ public class SwiftDmrtdPlugin: NSObject, FlutterPlugin {
                     case .requestPresentPassport:
                         return "Cihazı belgeye yakınlıaştırın"
                    case .successfulRead:
-                    return "Okuma tammalandı"
+                    return "Okuma tamamlandı"
                 case .error(let error):
                     if(error.value ==  NFCPassportReaderError.ConnectionError.value){
                         return "Bağlantı hatası"
@@ -81,11 +92,16 @@ public class SwiftDmrtdPlugin: NSObject, FlutterPlugin {
                        return nil
                }
            })
-            let image = response.passportImage?.jpegData(compressionQuality: 1)?.base64EncodedString()
+            let scaledImageSize = CGSize(
+                width: 240,
+                height: 320
+            )
+            let image = response.passportImage?.jpegData(compressionQuality: 0.7)?.base64EncodedString()
+            
             let documentDetails:[String : Any?]  = [
                 "name":response.firstName,
                 "surname":response.lastName,
-                "mrzContent":response.passportMRZ,
+                "mrzContent":self.parseMrz(mrzContent: response.passportMRZ),
                 "personalNumber":response.personalNumber,
                 "gender":response.gender,
                 "birthDate": Date().fromString(str:response.dateOfBirth)?.toString(format: "yyyyMMdd"),
@@ -111,15 +127,15 @@ public class SwiftDmrtdPlugin: NSObject, FlutterPlugin {
                     "personalNumber":response.personalNumber,
                   //"personalSummary":"personalSummary",
                     "placeOfBirth": response.placeOfBirth != nil ? [response.placeOfBirth] : [],
-                    //"profession":,
+                    "profession":response.proffesion,
                     //"proofOfCitizenship":,
                   //"tag":"tag",
                   //"tagPresenceList":"tagPresenceList",
-                  //"telephone":"telephone",
+                    "telephone":response.phoneNumber,
                     //"title":
                 ],
 
-                "error": mrzResult!.documentType
+                // "error": mrzResult!.documentType
                 
             ]
            

@@ -130,6 +130,7 @@ class DocumentReadTask implements Callable<ReadResult> {
             MRZInfo mrzInfo = dg1File.getMRZInfo();
             try {
                 String str = new String(mrzInfo.getEncoded(), "UTF-8");
+
                 switch(str.length()) {
                     case 90: /* ID1 */
                         documentDetails.setMrzContent( str.substring(0, 30) + "\n"
@@ -186,16 +187,16 @@ class DocumentReadTask implements Callable<ReadResult> {
                     allFingerImageInfos.addAll(fingerInfo.getFingerImageInfos());
                 }
 
-                List<Bitmap> fingerprintsImage = new ArrayList<>();
+                List<String> fingerprintsImage = new ArrayList<>();
 
                 if (!allFingerImageInfos.isEmpty()) {
 
                     for(FingerImageInfo fingerImageInfo : allFingerImageInfos) {
                         Image image = ImageUtil.getImage(context, fingerImageInfo);
-                        fingerprintsImage.add(image.getBitmapImage());
+                        fingerprintsImage.add(image.getBase64Image());
                     }
 
-                   // documentDetails.setFingerprints(fingerprintsImage);
+                   documentDetails.setFingerPrints(fingerprintsImage);
 
                 }
             } catch (Exception e) {

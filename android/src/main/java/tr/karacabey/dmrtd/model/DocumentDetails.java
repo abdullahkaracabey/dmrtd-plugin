@@ -1,6 +1,7 @@
 package tr.karacabey.dmrtd.model;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class DocumentDetails {
@@ -19,6 +20,8 @@ public class DocumentDetails {
     private String portraitImageBase64;
     private String signatureBase64;
     private String mrzContent;
+
+    private List<String> fingerPrints;
 
     public String getName() {
         return name;
@@ -132,7 +135,30 @@ public class DocumentDetails {
         this.mrzContent = mrzContent;
     }
 
+    public void setFingerPrints(List<String> fingerPrints){
+        this.fingerPrints = fingerPrints;
+    }
+
     public Map<String,String> toMap(){
+
+        StringBuilder fingerPrintsResult;
+
+
+        if(fingerPrints!=null){
+            fingerPrintsResult = new StringBuilder("[");
+        for (String item : fingerPrints) {
+            fingerPrintsResult.append(item);
+            if(fingerPrints.indexOf(item)<fingerPrintsResult.length()-1){
+                fingerPrintsResult.append(",");
+            }
+        }
+
+            fingerPrintsResult.append("]");
+        }else{
+            fingerPrintsResult=null;
+        }
+
+
 
         Map<String,String> result = new HashMap<String,String>();
         result.put("name",name);
@@ -149,6 +175,7 @@ public class DocumentDetails {
         result.put("portraitImageBase64",portraitImageBase64);
         result.put("signatureBase64",signatureBase64);
         result.put("mrzContent",mrzContent);
+        result.put("finderPrints",fingerPrintsResult!=null?fingerPrintsResult.toString():null);
 
         return result;
     }

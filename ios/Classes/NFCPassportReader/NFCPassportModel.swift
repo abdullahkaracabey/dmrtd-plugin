@@ -53,6 +53,12 @@ public class NFCPassportModel {
         return fullName
     }()
     
+    public private(set) lazy var fullName : String? = {
+        guard let dg11 = dataGroupsRead[.DG11] as? DataGroup11,
+              let fullName = dg11.fullName else { return nil }
+        return fullName
+    }()
+    
     public private(set) lazy var placeOfBirth : String? = {
         guard let dg11 = dataGroupsRead[.DG11] as? DataGroup11,
               let placeOfBirth = dg11.placeOfBirth else { return nil }

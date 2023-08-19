@@ -119,7 +119,7 @@ public class SwiftDmrtdPlugin: NSObject, FlutterPlugin {
                 "personDetails":[
                     //"custodyInformation":,
                     "fullDateOfBirth":Date().fromString(str:response.dateOfBirth)?.toString(format: "yyyyMMdd"),
-                    "nameOfHolder":response.firstName+"<<"+response.lastName,
+                    "nameOfHolder":response.fullName,
                   //"otherNames":"otherNames",
                   //"otherValidTDNumbers":"otherValidTDNumbers",
                     "permanentAddress":response.residenceAddress != nil ? [response.residenceAddress] : [],

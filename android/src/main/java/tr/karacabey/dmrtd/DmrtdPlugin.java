@@ -71,6 +71,7 @@ public class DmrtdPlugin implements FlutterPlugin, MethodCallHandler, ActivityAw
             }
             NfcAdapter nfcAdapter = getDefaultAdapter(activity);
             String mrzData = (String) call.arguments;
+            mrzData = mrzData.replaceAll("-", "");
             MRZInfo mrzInfo = new MRZInfo(mrzData);
 
             String passportNumber = mrzInfo.getDocumentNumber();

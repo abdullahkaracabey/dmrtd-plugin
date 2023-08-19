@@ -56,14 +56,13 @@ public class SwiftDmrtdPlugin: NSObject, FlutterPlugin {
         do{
             
             var mrzLines=[String]()
-            let chars = Array(mrzData)
-            if(mrzData.starts(with: "P")){
-                let firstLine =  mrzData.prefix(mrzData.count/2)
-                let secondLine =  mrzData.suffix(mrzData.count/2)
-                mrzLines.append(String(firstLine))
-                mrzLines.append(String(secondLine))
-            }
+           
+           var dataArray =  mrzData.split(separator: "-")
             
+            for  data in dataArray {
+                mrzLines.append(String(data))
+            }
+
             let mrzParser = QKMRZParser(ocrCorrection: true)
             let mrzResult = mrzParser.parse(mrzLines: mrzLines)
             
@@ -101,7 +100,7 @@ public class SwiftDmrtdPlugin: NSObject, FlutterPlugin {
             let documentDetails:[String : Any?]  = [
                 "name":response.firstName,
                 "surname":response.lastName,
-                "mrzContent":self.parseMrz(mrzContent: response.passportMRZ),
+                "mrzContent":response.passportMRZ,
                 "personalNumber":response.personalNumber,
                 "gender":response.gender,
                 "birthDate": Date().fromString(str:response.dateOfBirth)?.toString(format: "yyyyMMdd"),
@@ -110,9 +109,9 @@ public class SwiftDmrtdPlugin: NSObject, FlutterPlugin {
                 "serialNumber": response.documentSigningCertificate?.getSerialNumber(),
                 "nationality":response.nationality,
                 "issuerAuthority":response.issuerAuthority,
-                "faceImageBase64": image
+                "faceImageBase64": image,
               //"portraitImageBase64":"portraitImageBase64",
-              //"signatureBase64":"signatureBase64"
+            //   "signatureBase64":response.documentSigningCertificate?.getSignature()?.base64EncodedString(),
             ]
             let document:[String : Any?] = [
                 "docType": mrzResult!.documentType == "P" ? "passport" : (mrzResult!.documentType == "I" ? "idCard" : "other"),

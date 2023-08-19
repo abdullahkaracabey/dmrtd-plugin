@@ -31,7 +31,7 @@ class _MyAppState extends State<MyApp> {
     // We also handle the message potentially returning null.
     try {
       String mrzData =
-          "P<TURKARACABEY<<ABDULLAH<<<<<<<<<<<<<<<<<<<<U209530982TUR8406055M281030868347165134<<<02";
+          "P<TURKARACABEY<<ABDULLAH<<<<<<<<<<<<<<<<<<<<S355232271TUR8406055M330330068347165134<<<02";
       result = await _dmrtdPlugin.read(mrzData, _onStatusChange);
       debugPrint("result $result");
     } catch (e) {

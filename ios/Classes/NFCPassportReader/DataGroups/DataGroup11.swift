@@ -38,7 +38,13 @@ public class DataGroup11 : DataGroup {
             tag = try getNextTag()
             let val = try String( bytes:getNextValue(), encoding:.utf8)
             if tag == 0x5F0E {
-                fullName = val
+                if(fullName == nil){
+                    fullName = val
+                }else{
+                    fullName="Daha önce set edilmiş."
+                    
+                }
+                
             } else if tag == 0x5F10 {
                 personalNumber = val
             } else if tag == 0x5F11 {

@@ -48,15 +48,24 @@ public class NFCPassportModel {
     
     // Extract fields from DG11 if present
     private lazy var names : [String] = {
-        guard let dg11 = dataGroupsRead[.DG11] as? DataGroup11,
+        
+        return (passportDataElements?["5B"] ?? "?").components(separatedBy: "<<")
+       guard let dg11 = dataGroupsRead[.DG11] as? DataGroup11,
               let fullName = dg11.fullName?.components(separatedBy: "<<") else { return (passportDataElements?["5B"] ?? "?").components(separatedBy: "<<") }
+        
+       
         return fullName
     }()
     
     public private(set) lazy var fullName : String? = {
-        guard let dg11 = dataGroupsRead[.DG11] as? DataGroup11,
-              let fullName = dg11.fullName else { return nil }
-        return fullName
+       
+        
+        var name = ""
+                for i in 0 ..< names.count {
+                    let fn = names[i].replacingOccurrences(of: "<", with: " " ).trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+                    name += fn + " "
+                }
+                return name.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
     }()
     
     public private(set) lazy var placeOfBirth : String? = {

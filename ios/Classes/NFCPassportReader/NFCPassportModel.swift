@@ -60,12 +60,11 @@ public class NFCPassportModel {
     public private(set) lazy var fullName : String? = {
        
         
-        var name = ""
-                for i in 0 ..< names.count {
-                    let fn = names[i].replacingOccurrences(of: "<", with: " " ).trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-                    name += fn + " "
-                }
-                return name.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+        guard let dg11 = dataGroupsRead[.DG11] as? DataGroup11,
+              let fullName = dg11.fullName else { return ""}
+         
+        
+         return fullName
     }()
     
     public private(set) lazy var placeOfBirth : String? = {

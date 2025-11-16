@@ -69,7 +69,20 @@ public class SwiftDmrtdPlugin: NSObject, FlutterPlugin {
         
             let passportUtil = PassportUtils()
           
-            let mrzKey = passportUtil.getMRZKey(passportNumber: mrzResult!.documentNumber, dateOfBirth: mrzResult!.birthdate!.toString(), dateOfExpiry: mrzResult!.expiryDate!.toString())
+            // Format dates properly for BAC key generation (YYMMDD format required)
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyMMdd"
+            
+            let dobString = dateFormatter.string(from: mrzResult!.birthdate!)
+            let expString = dateFormatter.string(from: mrzResult!.expiryDate!)
+            
+            print("DEBUG: Document Number: \(mrzResult!.documentNumber)")
+            print("DEBUG: Date of Birth (formatted): \(dobString)")
+            print("DEBUG: Date of Expiry (formatted): \(expString)")
+            
+            let mrzKey = passportUtil.getMRZKey(passportNumber: mrzResult!.documentNumber, dateOfBirth: dobString, dateOfExpiry: expString)
+            
+            print("DEBUG: Generated MRZ Key: \(mrzKey)")
             
             let passportReader = PassportReader()
             
@@ -86,11 +99,52 @@ public class SwiftDmrtdPlugin: NSObject, FlutterPlugin {
                        return "Bilinmeyen bir hata oluştu"
                    case .readingDataGroupProgress(let dataGroup, let progress):
                    let progressString = self.handleProgress(percentualProgress: progress)
-                       return "Belge okunuyor...\n\(progressString)"
+                       return "Belge okunuyor \(dataGroup)...\n\(progressString)"
                    default:
                        return nil
                }
            })
+            
+            // Log all read data groups with details
+            print("\n=== iOS NFC READ COMPLETED ===")
+            print("PACE Status: \(response.PACEStatus)")
+            print("BAC Status: \(response.BACStatus)")
+            print("Chip Auth Status: \(response.chipAuthenticationStatus)")
+            print("Active Auth Supported: \(response.activeAuthenticationSupported)")
+            
+            print("\n--- Document Info (DG1, DG2) ---")
+            print("First Name: \(response.firstName ?? "nil")")
+            print("Last Name: \(response.lastName ?? "nil")")
+            print("Full Name: \(response.fullName ?? "nil")")
+            print("Personal Number: \(response.personalNumber ?? "nil")")
+            print("Gender: \(response.gender ?? "nil")")
+            print("Date of Birth: \(response.dateOfBirth ?? "nil")")
+            print("Nationality: \(response.nationality ?? "nil")")
+            print("Document Number: \(response.documentNumber ?? "nil")")
+            print("Document Expiry: \(response.documentExpiryDate ?? "nil")")
+            print("Passport Image Available: \(response.passportImage != nil ? "YES" : "NO")")
+            
+            print("\n--- Additional Details (DG11, DG12, DG13, DG15) ---")
+            print("Place of Birth: \(response.placeOfBirth ?? "nil")")
+            print("Issuer Authority: \(response.issuerAuthority ?? "nil")")
+            print("Date of Issue: \(response.dateOfIssue ?? "nil")")
+            print("Residence Address: \(response.residenceAddress ?? "nil")")
+            print("Phone Number: \(response.phoneNumber ?? "nil")")
+            print("Profession: \(response.proffesion ?? "nil")")
+            
+            print("\n--- Security & Verification (DG14, DG15, SOD) ---")
+            print("Document Signing Cert Available: \(response.documentSigningCertificate != nil ? "YES" : "NO")")
+            print("Country Signing Cert Available: \(response.countrySigningCertificate != nil ? "YES" : "NO")")
+            print("LDS Version: \(response.LDSVersion ?? "nil")")
+            print("Data Groups Available: \(response.dataGroupsAvailable.map { "\($0)" }.joined(separator: ", "))")
+            print("Data Groups Read: \(response.dataGroupsRead.map { "\($0)" }.joined(separator: ", "))")
+            print("Active Auth Verified: \(response.activeAuthenticationPassed)")
+            print("Verification Errors: \(response.verificationErrors.count) errors")
+            for error in response.verificationErrors {
+                print("  - \(error)")
+            }
+            print("==============================\n")
+            
             let scaledImageSize = CGSize(
                 width: 240,
                 height: 320

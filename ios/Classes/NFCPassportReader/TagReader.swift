@@ -234,9 +234,16 @@ public class TagReader {
     func selectPassportApplication() async throws -> ResponseAPDU {
         // Finally reselect the eMRTD application so the rest of the reading works as normal
         Log.debug( "Re-selecting eMRTD Application" )
-        let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: 0x00, instructionCode: 0xA4, p1Parameter: 0x04, p2Parameter: 0x0C, data: Data([0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01]), expectedResponseLength: 256)
+        Log.debug( "Secure messaging is: \(secureMessaging != nil ? "ACTIVE" : "INACTIVE")" )
+        
+        // When secure messaging is active, use -1 for expectedResponseLength to let the card determine the length
+        let expectedLen = (secureMessaging != nil) ? -1 : 256
+        Log.debug( "Using expectedResponseLength: \(expectedLen)" )
+        
+        let cmd : NFCISO7816APDU = NFCISO7816APDU(instructionClass: 0x00, instructionCode: 0xA4, p1Parameter: 0x04, p2Parameter: 0x0C, data: Data([0xA0, 0x00, 0x00, 0x02, 0x47, 0x10, 0x01]), expectedResponseLength: expectedLen)
         
         let response = try await self.send( cmd: cmd)
+        Log.debug( "Select application complete - SW: \(String(format: "%02X %02X", response.sw1, response.sw2))" )
         return response
     }
     
@@ -272,6 +279,10 @@ public class TagReader {
             Log.error( "Error reading tag: sw1 - 0x\(binToHexRep(sw1)), sw2 - 0x\(binToHexRep(sw2))" )
             let tagError: NFCPassportReaderError
             if (rep.sw1 == 0x63 && rep.sw2 == 0x00) {
+                tagError = NFCPassportReaderError.InvalidMRZKey
+            } else if (rep.sw1 == 0x6A && rep.sw2 == 0x88) {
+                // Referenced data not found - typically wrong BAC keys
+                Log.error( "BAC authentication failed - MRZ key is likely incorrect" )
                 tagError = NFCPassportReaderError.InvalidMRZKey
             } else {
                 let errorMsg = self.decodeError(sw1: rep.sw1, sw2: rep.sw2)

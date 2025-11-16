@@ -230,13 +230,28 @@ extension PassportReader {
                 let paceHandler = try PACEHandler( cardAccess: cardAccess, tagReader: tagReader )
                 try await paceHandler.doPACE(mrzKey: mrzKey )
                 passport.PACEStatus = .success
-                Log.debug( "PACE Succeeded" )
+                Log.info( "PACE Succeeded - secure messaging established" )
+                
+                // Must select eMRTD application after PACE
+                // readCardAccess selected Master File, so we need to switch back
+                Log.info( "Selecting eMRTD application after PACE..." )
+                do {
+                    let selectResp = try await tagReader.selectPassportApplication()
+                    Log.info( "eMRTD application selected - SW: \(String(format: "%02X %02X", selectResp.sw1, selectResp.sw2))" )
+                } catch {
+                    Log.error( "Failed to select eMRTD application after PACE: \(error)" )
+                    throw error
+                }
             } catch {
                 passport.PACEStatus = .failed
                 Log.error( "PACE Failed - falling back to BAC" )
+                
+                // Clear any secure messaging from failed PACE
+                tagReader.secureMessaging = nil
+                
+                // Reselect passport application for BAC
+                _ = try await tagReader.selectPassportApplication()
             }
-            
-            _ = try await tagReader.selectPassportApplication()
         }
         
         // If either PACE isn't supported, we failed whilst doing PACE or we didn't even attempt it, then fall back to BAC
@@ -294,12 +309,20 @@ extension PassportReader {
         var DGsToRead = [DataGroupId]()
 
         self.updateReaderSessionMessage( alertMessage: NFCViewDisplayMessage.readingDataGroupProgress(.COM, 0) )
-        if let com = try await readDataGroup(tagReader:tagReader, dgId:.COM) as? COM {
-            self.passport.addDataGroup( .COM, dataGroup:com )
         
-            // SOD and COM shouldn't be present in the DG list but just in case (worst case here we read the sod twice)
-            DGsToRead = [.SOD] + com.dataGroupsPresent.map { DataGroupId.getIDFromName(name:$0) }
-            DGsToRead.removeAll { $0 == .COM }
+        do {
+            if let com = try await readDataGroup(tagReader:tagReader, dgId:.COM) as? COM {
+                self.passport.addDataGroup( .COM, dataGroup:com )
+            
+                // SOD and COM shouldn't be present in the DG list but just in case (worst case here we read the sod twice)
+                DGsToRead = [.SOD] + com.dataGroupsPresent.map { DataGroupId.getIDFromName(name:$0) }
+                DGsToRead.removeAll { $0 == .COM }
+            }
+        } catch {
+            // COM file not found or can't be read - use default data groups
+            // This is common for some passports, especially after PACE
+            Log.warning("COM file not found, using default data groups: \(error)")
+            DGsToRead = [.DG1, .DG2]
         }
         
         if DGsToRead.contains( .DG14 ) {
@@ -389,8 +412,15 @@ extension PassportReader {
                 }
                 
                 if redoBAC {
-                    // Redo BAC and try again
-                    try await doBACAuthentication(tagReader : tagReader)
+                    // Only redo BAC if PACE was not successful
+                    // If PACE succeeded, we already have secure messaging established
+                    if self.passport.PACEStatus != .success {
+                        try await doBACAuthentication(tagReader : tagReader)
+                    } else {
+                        // PACE succeeded but we can't read this data group
+                        // Don't retry, just skip it
+                        throw error
+                    }
                 } else {
                     // Some other error lets have another try
                 }

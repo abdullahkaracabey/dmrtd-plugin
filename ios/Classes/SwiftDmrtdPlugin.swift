@@ -80,6 +80,11 @@ public class SwiftDmrtdPlugin: NSObject, FlutterPlugin {
             print("DEBUG: Date of Birth (formatted): \(dobString)")
             print("DEBUG: Date of Expiry (formatted): \(expString)")
             
+            // Log BAC key input for comparison with Android
+            let bacInput = "\(mrzResult!.documentNumber)\(dobString)\(expString)"
+            print("DEBUG: BAC Key Input String: \(bacInput)")
+            print("DEBUG: BAC Key Input Length: \(bacInput.count)")
+            
             let mrzKey = passportUtil.getMRZKey(passportNumber: mrzResult!.documentNumber, dateOfBirth: dobString, dateOfExpiry: expString)
             
             print("DEBUG: Generated MRZ Key: \(mrzKey)")

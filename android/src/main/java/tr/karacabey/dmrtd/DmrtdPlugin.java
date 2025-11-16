@@ -16,6 +16,12 @@ import org.jmrtd.BACKey;
 import org.jmrtd.BACKeySpec;
 import org.jmrtd.lds.icao.MRZInfo;
 
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.embedding.engine.plugins.activity.ActivityAware;
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
@@ -71,12 +77,46 @@ public class DmrtdPlugin implements FlutterPlugin, MethodCallHandler, ActivityAw
             }
             NfcAdapter nfcAdapter = getDefaultAdapter(activity);
             String mrzData = (String) call.arguments;
+            Log.i("NFC_MRZ_INPUT", "Received MRZ from Flutter: " + mrzData);
             mrzData = mrzData.replaceAll("-", "");
+            Log.i("NFC_MRZ_INPUT", "MRZ after removing dashes: " + mrzData);
             MRZInfo mrzInfo = new MRZInfo(mrzData);
 
             String passportNumber = mrzInfo.getDocumentNumber();
             String expirationDate = mrzInfo.getDateOfExpiry();
             String birthDate = mrzInfo.getDateOfBirth();
+
+            Log.i("NFC_BAC_KEY", "Creating BAC key from MRZ:");
+            Log.i("NFC_BAC_KEY", "  Passport Number (raw): '" + passportNumber + "' (length: " + passportNumber.length() + ")");
+            Log.i("NFC_BAC_KEY", "  Birth Date (raw): " + birthDate);
+            Log.i("NFC_BAC_KEY", "  Expiry Date (raw): " + expirationDate);
+            
+            // Passport number should be exactly 9 characters, padded with '<' if needed
+            // But JMRTD MRZInfo.getDocumentNumber() should already handle this
+            // Let's verify the format
+            if (passportNumber.length() < 9) {
+                Log.w("NFC_BAC_KEY", "Warning: Passport number is shorter than 9 characters, padding with '<'");
+                while (passportNumber.length() < 9) {
+                    passportNumber = passportNumber + "<";
+                }
+            } else if (passportNumber.length() > 9) {
+                Log.w("NFC_BAC_KEY", "Warning: Passport number is longer than 9 characters, truncating");
+                passportNumber = passportNumber.substring(0, 9);
+            }
+            
+            Log.i("NFC_BAC_KEY", "  Passport Number (after padding): '" + passportNumber + "' (length: " + passportNumber.length() + ")");
+
+            // Format dates to ensure correct yyMMdd format for BAC
+            birthDate = formatDateForBAC(birthDate);
+            expirationDate = formatDateForBAC(expirationDate);
+
+            Log.i("NFC_BAC_KEY", "  Birth Date (formatted): " + birthDate);
+            Log.i("NFC_BAC_KEY", "  Expiry Date (formatted): " + expirationDate);
+            
+            // Log the concatenated string that will be used for BAC key generation
+            String bacInput = passportNumber + birthDate + expirationDate;
+            Log.i("NFC_BAC_KEY", "BAC Key Input String: '" + bacInput + "'");
+            Log.i("NFC_BAC_KEY", "BAC Key Input Length: " + bacInput.length());
 
             BACKeySpec bacKey = new BACKey(passportNumber, birthDate, expirationDate);
             //result.success(mrzInfo.getDocumentNumber());
@@ -156,6 +196,33 @@ public class DmrtdPlugin implements FlutterPlugin, MethodCallHandler, ActivityAw
             isOnAction=false;
             Log.i("readDocument", "finished");
         });
+    }
+
+    /**
+     * Format date from MRZ format (YYMMDD) to ensure correct format for BAC
+     * MRZInfo returns dates as strings, we need to ensure they are in yyMMdd format
+     */
+    private String formatDateForBAC(String mrzDate) {
+        if (mrzDate == null || mrzDate.length() != 6) {
+            Log.w("NFC_BAC_KEY", "Invalid date format: " + mrzDate);
+            return mrzDate; // Return as-is if invalid
+        }
+        
+        // MRZ dates are already in YYMMDD format, but let's ensure it's properly formatted
+        // by parsing and reformatting
+        try {
+            SimpleDateFormat mrzFormat = new SimpleDateFormat("yyMMdd", Locale.US);
+            mrzFormat.setLenient(false);
+            Date date = mrzFormat.parse(mrzDate);
+            
+            // Format back to yyMMdd to ensure consistency
+            String formatted = mrzFormat.format(date);
+            Log.i("NFC_BAC_KEY", "Date formatted: " + mrzDate + " -> " + formatted);
+            return formatted;
+        } catch (ParseException e) {
+            Log.w("NFC_BAC_KEY", "Failed to parse date: " + mrzDate + ", using as-is");
+            return mrzDate; // Return original if parsing fails
+        }
     }
 
     @Override

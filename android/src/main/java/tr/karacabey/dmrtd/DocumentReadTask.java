@@ -16,6 +16,7 @@ import net.sf.scuba.smartcards.CardServiceException;
 
 import org.jmrtd.BACKeySpec;
 import org.jmrtd.PassportService;
+import org.jmrtd.lds.CardAccessFile;
 import org.jmrtd.lds.CardSecurityFile;
 import org.jmrtd.lds.DisplayedImageInfo;
 import org.jmrtd.lds.PACEInfo;
@@ -89,17 +90,31 @@ class DocumentReadTask implements Callable<ReadResult> {
 
             boolean paceSucceeded = false;
             try {
-                CardSecurityFile cardSecurityFile = new CardSecurityFile(service.getInputStream(PassportService.EF_CARD_SECURITY));
-                Collection<SecurityInfo> securityInfoCollection = cardSecurityFile.getSecurityInfos();
+                Log.i("NFC_READ", "Attempting PACE authentication...");
+                
+                // Read CardAccess from Master File (similar to iOS implementation)
+                // CardAccess is stored in EF.CardAccess (file 0x011C) in the Master File
+                // We need to read this before doing PACE
+                CardFileInputStream cardAccessStream = service.getInputStream(PassportService.EF_CARD_ACCESS);
+                CardAccessFile cardAccessFile = new CardAccessFile(cardAccessStream);
+                Collection<SecurityInfo> securityInfoCollection = cardAccessFile.getSecurityInfos();
+                
                 for (SecurityInfo securityInfo : securityInfoCollection) {
                     if (securityInfo instanceof PACEInfo) {
                         PACEInfo paceInfo = (PACEInfo) securityInfo;
+                        Log.i("NFC_READ", "PACE Info found: " + paceInfo.getObjectIdentifier());
                         service.doPACE(bacKey, paceInfo.getObjectIdentifier(), PACEInfo.toParameterSpec(paceInfo.getParameterId()), null);
                         paceSucceeded = true;
+                        Log.i("NFC_READ", "PACE authentication succeeded!");
+                        break; // Only use first PACE info
                     }
                 }
+                if (!paceSucceeded) {
+                    Log.i("NFC_READ", "No PACE info found, will try BAC");
+                }
             } catch (Exception e) {
-                Log.w(TAG, e);
+                Log.w(TAG, "PACE failed: " + e.getMessage(), e);
+                Log.i("NFC_READ", "PACE failed, will fall back to BAC");
 
 
                 if(e instanceof CardServiceException){
@@ -113,17 +128,22 @@ class DocumentReadTask implements Callable<ReadResult> {
             }
 
             service.sendSelectApplet(paceSucceeded);
+            Log.i("NFC_READ", "Applet selected (after " + (paceSucceeded ? "PACE" : "attempting PACE") + ")");
 
             if (!paceSucceeded) {
                 try {
                     service.getInputStream(PassportService.EF_COM).read();
+                    Log.i("NFC_READ", "EF_COM readable without BAC");
                 } catch (Exception e) {
+                    Log.i("NFC_READ", "Performing BAC authentication...");
                     service.doBAC(bacKey);
+                    Log.i("NFC_READ", "BAC authentication succeeded!");
                 }
             }
 
             statusCallback.onChange("readDocumentDetails");
             // -- Personal Details -- //
+            Log.i("NFC_READ", "Reading DG1 (MRZ)...");
             CardFileInputStream dg1In = service.getInputStream(PassportService.EF_DG1);
             DG1File dg1File = new DG1File(dg1In);
 
@@ -161,6 +181,7 @@ class DocumentReadTask implements Callable<ReadResult> {
             }
 
             // -- Face Image -- //
+            Log.i("NFC_READ", "Reading DG2 (Face Image)...");
             CardFileInputStream dg2In = service.getInputStream(PassportService.EF_DG2);
             DG2File dg2File = new DG2File(dg2In);
 
@@ -239,6 +260,7 @@ class DocumentReadTask implements Callable<ReadResult> {
             statusCallback.onChange("readPersonalDetails");
             // -- Additional Details (if exist) -- //
             try {
+                Log.i("NFC_READ", "Reading DG11 (Additional Personal Details)...");
                 CardFileInputStream dg11In = service.getInputStream(PassportService.EF_DG11);
                 DG11File dg11File = new DG11File(dg11In);
 
@@ -265,6 +287,7 @@ class DocumentReadTask implements Callable<ReadResult> {
             }
 
             try {
+                Log.i("NFC_READ", "Reading DG12 (Document Issuing Data)...");
                 CardFileInputStream dg12In = service.getInputStream(PassportService.EF_DG12);
                 DG12File dg12File = new DG12File(dg12In);
 
@@ -286,6 +309,50 @@ class DocumentReadTask implements Callable<ReadResult> {
                 Log.w(TAG, e);
             }
             service.close();
+
+            // Log all read data groups with details
+            Log.i("NFC_READ", "");
+            Log.i("NFC_READ", "=== ANDROID NFC READ COMPLETED ===");
+            Log.i("NFC_READ", "Authentication: " + (paceSucceeded ? "PACE" : "BAC"));
+            Log.i("NFC_READ", "");
+            
+            Log.i("NFC_READ", "--- Document Details (DG1, DG2) ---");
+            Log.i("NFC_READ", "Name: " + documentDetails.getName());
+            Log.i("NFC_READ", "Surname: " + documentDetails.getSurname());
+            Log.i("NFC_READ", "Personal Number: " + documentDetails.getPersonalNumber());
+            Log.i("NFC_READ", "Gender: " + documentDetails.getGender());
+            Log.i("NFC_READ", "Birth Date: " + documentDetails.getBirthDate());
+            Log.i("NFC_READ", "Expiry Date: " + documentDetails.getExpiryDate());
+            Log.i("NFC_READ", "Serial Number: " + documentDetails.getSerialNumber());
+            Log.i("NFC_READ", "Nationality: " + documentDetails.getNationality());
+            Log.i("NFC_READ", "Issuer Authority: " + documentDetails.getIssuerAuthority());
+            Log.i("NFC_READ", "Issue Date: " + documentDetails.getIssueDate());
+            Log.i("NFC_READ", "Document Type: " + docType);
+            Log.i("NFC_READ", "");
+            
+            Log.i("NFC_READ", "--- Images (DG2, DG3, DG5, DG7) ---");
+            Log.i("NFC_READ", "Face Image: " + (documentDetails.getFaceImageBase64() != null ? "YES (" + documentDetails.getFaceImageBase64().length() + " chars)" : "NO"));
+            Log.i("NFC_READ", "Portrait Image: " + (documentDetails.getPortraitImageBase64() != null ? "YES" : "NO"));
+            Log.i("NFC_READ", "Signature: " + (documentDetails.getSignatureBase64() != null ? "YES" : "NO"));
+            Log.i("NFC_READ", "");
+            
+            Log.i("NFC_READ", "--- Person Details (DG11, DG12) ---");
+            Log.i("NFC_READ", "Full Date of Birth: " + personDetails.getFullDateOfBirth());
+            Log.i("NFC_READ", "Place of Birth: " + (personDetails.getPlaceOfBirth() != null ? String.join(", ", personDetails.getPlaceOfBirth()) : "null"));
+            Log.i("NFC_READ", "Permanent Address: " + (personDetails.getPermanentAddress() != null ? String.join(", ", personDetails.getPermanentAddress()) : "null"));
+            Log.i("NFC_READ", "Telephone: " + personDetails.getTelephone());
+            Log.i("NFC_READ", "Profession: " + personDetails.getProfession());
+            Log.i("NFC_READ", "Name of Holder: " + personDetails.getNameOfHolder());
+            Log.i("NFC_READ", "Title: " + personDetails.getTitle());
+            Log.i("NFC_READ", "Other Names: " + (personDetails.getOtherNames() != null ? String.join(", ", personDetails.getOtherNames()) : "null"));
+            Log.i("NFC_READ", "Personal Summary: " + personDetails.getPersonalSummary());
+            Log.i("NFC_READ", "Custody Information: " + personDetails.getCustodyInformation());
+            Log.i("NFC_READ", "Tag Presence List: " + personDetails.getTagPresenceList());
+            Log.i("NFC_READ", "");
+            Log.i("NFC_READ", "--- MRZ Content ---");
+            Log.i("NFC_READ", documentDetails.getMrzContent());
+            Log.i("NFC_READ", "==============================");
+            Log.i("NFC_READ", "");
 
             eDocument.setDocType(docType);
             eDocument.setDocumentDetails(documentDetails);

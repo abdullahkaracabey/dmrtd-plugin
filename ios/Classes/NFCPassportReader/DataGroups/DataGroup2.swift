@@ -37,12 +37,25 @@ public class DataGroup2 : DataGroup {
     
     
 #if !os(macOS)
-func getImage() -> UIImage? {
+    func getImage() -> UIImage? {
         if imageData.count == 0 {
             return nil
         }
         
-    let image = UIImage(data:Data(imageData) )
+        let data = Data(imageData)
+        
+        // Check if it's JPEG 2000 raw codestream (FF 4F FF 51)
+        if data.isJPEG2000Codestream {
+            // Use OpenJPEG decoder for raw codestream
+            if let image = data.toJPEG2000Image() {
+                return image
+            }
+            // If OpenJPEG fails, fall through to try native decoder
+            print("[DataGroup2] OpenJPEG decode failed, trying native decoder")
+        }
+        
+        // Try native decoder (works for JP2 container and standard JPEG)
+        let image = UIImage(data: data)
         return image
     }
 #endif
